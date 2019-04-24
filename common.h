@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <netdb.h>
 
 #define MAX_BUFFER 128
 
@@ -107,7 +108,7 @@ void receiveFromServer (int socket) {
     }
 }
 
-int createConnectionTcp (int socket, const char * ip, int port) {
+int createTcpConnection (int socket, const char * ip, int port) {
     int connectStatus;
     struct sockaddr_in address;
 
@@ -127,7 +128,7 @@ int createConnectionTcp (int socket, const char * ip, int port) {
     return connectStatus;
 }
 
-int listenForClientTcp (int socket, int backlog) {
+int listenForClient (int socket, int backlog) {
     int listenStatus = listen(socket, backlog);
 
     if (listenStatus == -1) {
@@ -137,4 +138,32 @@ int listenForClientTcp (int socket, int backlog) {
     }
 
     return listenStatus;
+}
+
+char* lookupDomain(char* domain) {
+struct addrinfo hints, *res, *res0;
+	int error;
+	static char host[NI_MAXHOST];
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	error = getaddrinfo(domain, NULL, &hints, &res0);
+	if (error) {
+		fprintf(stderr, "%s\n", gai_strerror(error));
+		exit(1);
+	}
+
+	for (res = res0; res; res = res->ai_next) {
+		error = getnameinfo(res->ai_addr, res->ai_addrlen,
+		    host, sizeof host, NULL, 0, NI_NUMERICHOST);
+
+		if (error) {
+			fprintf(stderr, "dns lookup error: %s\n", gai_strerror(error));
+		}
+	}
+
+	freeaddrinfo(res0);
+
+    return host;
 }
